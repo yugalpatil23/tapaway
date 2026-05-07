@@ -1,0 +1,210 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'arrow_block.dart';
+
+class GameLevel {
+  final int levelNumber;
+  final int gridSize;
+  final List<ArrowBlock> blocks;
+  final String difficulty;
+  final Color themeColor;
+  final Color themeDark;
+
+  const GameLevel({
+    required this.levelNumber,
+    required this.gridSize,
+    required this.blocks,
+    required this.difficulty,
+    required this.themeColor,
+    required this.themeDark,
+  });
+}
+
+class LevelGenerator {
+  static final Random _rng = Random(42); // seeded so levels are reproducible
+
+  // ── Colour palettes per difficulty ──────────────────────────────────────────
+  static const _easyPalette = [
+    [Color(0xFF4CC9F0), Color(0xFF023E8A)],
+    [Color(0xFF80FFDB), Color(0xFF0F6E47)],
+    [Color(0xFFFFD166), Color(0xFF8B5A00)],
+    [Color(0xFFFF6B9D), Color(0xFF8B0038)],
+    [Color(0xFFA29BFE), Color(0xFF3D2D9E)],
+  ];
+  static const _medPalette = [
+    [Color(0xFFFF9F1C), Color(0xFF8B4500)],
+    [Color(0xFF2EC4B6), Color(0xFF0A4D47)],
+    [Color(0xFFE71D36), Color(0xFF6B0015)],
+    [Color(0xFF9B5DE5), Color(0xFF4A1A8C)],
+    [Color(0xFF00BBF9), Color(0xFF004F73)],
+  ];
+  static const _hardPalette = [
+    [Color(0xFFFF4D6D), Color(0xFF7A0026)],
+    [Color(0xFF7B2FBE), Color(0xFF2D0057)],
+    [Color(0xFFFF6B35), Color(0xFF7A2500)],
+    [Color(0xFF14213D), Color(0xFF070D1E)],
+    [Color(0xFF06D6A0), Color(0xFF024034)],
+  ];
+  static const _expertPalette = [
+    [Color(0xFF560BAD), Color(0xFF1A0035)],
+    [Color(0xFFD62828), Color(0xFF5C0000)],
+    [Color(0xFF023E8A), Color(0xFF00072B)],
+    [Color(0xFF1B4332), Color(0xFF081A11)],
+    [Color(0xFF9D0208), Color(0xFF3D0003)],
+  ];
+
+  static GameLevel generate(int level) {
+    // Use a seeded RNG per level for reproducibility
+    final rng = Random(level * 31337 + 7);
+
+    final gridSize = _gridSize(level);
+    final difficulty = _difficulty(level);
+    final palette = _palette(level);
+    final themeColor = palette[0];
+    final themeDark = palette[1];
+
+    final blocks = _buildLevel(level, gridSize, rng);
+
+    return GameLevel(
+      levelNumber: level,
+      gridSize: gridSize,
+      blocks: blocks,
+      difficulty: difficulty,
+      themeColor: Colors.red,
+      themeDark: Colors.green,
+    );
+  }
+
+  static int _gridSize(int level) {
+    if (level <= 10) return 4;
+    if (level <= 25) return 5;
+    if (level <= 50) return 6;
+    if (level <= 100) return 7;
+    if (level <= 200) return 8;
+    if (level <= 400) return 9;
+    return 10;
+  }
+
+  static String _difficulty(int level) {
+    if (level <= 50) return 'Easy';
+    if (level <= 200) return 'Medium';
+    if (level <= 500) return 'Hard';
+    return 'Expert';
+  }
+
+  static List<List<Color>> _palette(int level) {
+    List<List<Color>> p;
+    if (level <= 50)
+      p = _easyPalette;
+    else if (level <= 200)
+      p = _medPalette;
+    else if (level <= 500)
+      p = _hardPalette;
+    else
+      p = _expertPalette;
+    return p;
+  }
+
+  static List<Color> _blockColors(int level, Random rng) {
+    // Per-block: pick from a wider set
+    return [
+      const Color(0xFF4CC9F0),
+      const Color(0xFF80FFDB),
+      const Color(0xFFFFD166),
+      const Color(0xFFFF6B9D),
+      const Color(0xFFA29BFE),
+      const Color(0xFFFF9F1C),
+      const Color(0xFF2EC4B6),
+      const Color(0xFFE71D36),
+      const Color(0xFF9B5DE5),
+      const Color(0xFF06D6A0),
+    ];
+  }
+
+  static List<Color> _blockDark(int level) => [
+    const Color(0xFF023E8A),
+    const Color(0xFF0F6E47),
+    const Color(0xFF8B5A00),
+    const Color(0xFF8B0038),
+    const Color(0xFF3D2D9E),
+    const Color(0xFF8B4500),
+    const Color(0xFF0A4D47),
+    const Color(0xFF6B0015),
+    const Color(0xFF4A1A8C),
+    const Color(0xFF024034),
+  ];
+
+  // ── Core generation ──────────────────────────────────────────────────────────
+  static List<ArrowBlock> _buildLevel(int level, int gridSize, Random rng) {
+    // Density: ramps from 30% → 80% over 1000 levels
+    final density = 0.30 + (level - 1) * (0.50 / 999.0);
+    final totalCells = gridSize * gridSize;
+    final blockCount = (totalCells * density).round().clamp(3, totalCells);
+
+    // Shuffle positions
+    final positions = [
+      for (int r = 0; r < gridSize; r++)
+        for (int c = 0; c < gridSize; c++) [r, c],
+    ]..shuffle(rng);
+
+    final colors = _blockColors(level, rng);
+    final darks = _blockDark(level);
+
+    final List<ArrowBlock> blocks = [];
+    int id = 0;
+
+    for (int i = 0; i < blockCount; i++) {
+      final r = positions[i][0];
+      final c = positions[i][1];
+      final dir = _pickDirection(r, c, gridSize, level, rng);
+      final ci = id % colors.length;
+
+      blocks.add(
+        ArrowBlock(
+          id: 'b$id',
+          row: r,
+          col: c,
+          direction: dir,
+          color: colors[ci],
+          darkColor: darks[ci],
+        ),
+      );
+      id++;
+    }
+    return blocks;
+  }
+
+  static ArrowDirection _pickDirection(
+    int row,
+    int col,
+    int gs,
+    int level,
+    Random rng,
+  ) {
+    // Higher levels → more random (less edge-bias)
+    // At level 1: 80% toward nearest edge, 20% random
+    // At level 1000: 30% toward nearest edge
+    final biasFactor = (0.80 - (level - 1) * 0.50 / 999.0).clamp(0.30, 0.80);
+
+    if (rng.nextDouble() > biasFactor) {
+      // Completely random
+      return ArrowDirection.values[rng.nextInt(4)];
+    }
+
+    // Pick the direction toward nearest edge
+    final toTop = row;
+    final toBottom = gs - 1 - row;
+    final toLeft = col;
+    final toRight = gs - 1 - col;
+
+    final minDist = [toTop, toBottom, toLeft, toRight].reduce(min);
+
+    final candidates = <ArrowDirection>[];
+    if (toTop == minDist) candidates.add(ArrowDirection.up);
+    if (toBottom == minDist) candidates.add(ArrowDirection.down);
+    if (toLeft == minDist) candidates.add(ArrowDirection.left);
+    if (toRight == minDist) candidates.add(ArrowDirection.right);
+
+    return candidates[rng.nextInt(candidates.length)];
+  }
+}
