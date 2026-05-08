@@ -250,23 +250,23 @@ class _SettingsScreenState extends State<SettingsScreen>
           subtitle: 'Learn the rules and mechanics',
           onTap: () => _showHowToPlay(context),
         ),
-        // _divider(),
-        // // FIX #15: Uses url_launcher
-        // _ActionRow(
-        //   icon: Icons.privacy_tip_rounded,
-        //   iconColor: const Color(0xFF9B5DE5),
-        //   title: 'Privacy Policy',
-        //   subtitle: 'How we handle your data',
-        //   onTap: () => _openUrl('https://yourwebsite.com/privacy'),
-        // ),
-        // _divider(),
-        // _ActionRow(
-        //   icon: Icons.gavel_rounded,
-        //   iconColor: const Color(0xFF607D8B),
-        //   title: 'Terms of Service',
-        //   subtitle: 'Usage terms and conditions',
-        //   onTap: () => _openUrl('https://yourwebsite.com/terms'),
-        // ),
+        _divider(),
+        // FIX #15: Uses url_launcher
+        _ActionRow(
+          icon: Icons.privacy_tip_rounded,
+          iconColor: const Color(0xFF9B5DE5),
+          title: 'Privacy Policy',
+          subtitle: 'How we handle your data',
+          onTap: () => _openUrl(GameConstants.privacyPolicyUrl),
+        ),
+        _divider(),
+        _ActionRow(
+          icon: Icons.gavel_rounded,
+          iconColor: const Color(0xFF607D8B),
+          title: 'Terms of Service',
+          subtitle: 'Usage terms and conditions',
+          onTap: () => _openUrl(GameConstants.termsOfServiceUrl),
+        ),
       ],
     );
   }
