@@ -1,4 +1,4 @@
-package com.example.tapaway
+package com.alphay.tapaway
 
 import io.flutter.embedding.android.FlutterActivity
 
