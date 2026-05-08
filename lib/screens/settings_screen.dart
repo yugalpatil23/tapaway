@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:tapaway/utils/game_constants.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../audio/audio_manager.dart';
 import '../models/game_state.dart';
+import '../utils/game_assets.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -190,23 +193,23 @@ class _SettingsScreenState extends State<SettingsScreen>
     return _SettingsCard(
       children: [
         // FIX #12: Uses share_plus
-        _ActionRow(
-          icon: Icons.share_rounded,
-          iconColor: const Color(0xFFA29BFE),
-          title: 'Share Game',
-          subtitle: 'Invite friends to play Tap Away',
-          onTap: _shareGame,
-        ),
-        _divider(),
-        // FIX #13: Uses url_launcher
-        _ActionRow(
-          icon: Icons.star_rounded,
-          iconColor: const Color(0xFFFFD60A),
-          title: 'Rate the Game',
-          subtitle: 'Love it? Leave us a 5★ review',
-          onTap: _rateGame,
-        ),
-        _divider(),
+        // _ActionRow(
+        //   icon: Icons.share_rounded,
+        //   iconColor: const Color(0xFFA29BFE),
+        //   title: 'Share Game',
+        //   subtitle: 'Invite friends to play Tap Away',
+        //   onTap: _shareGame,
+        // ),
+        // _divider(),
+        // // FIX #13: Uses url_launcher
+        // _ActionRow(
+        //   icon: Icons.star_rounded,
+        //   iconColor: const Color(0xFFFFD60A),
+        //   title: 'Rate the Game',
+        //   subtitle: 'Love it? Leave us a 5★ review',
+        //   onTap: _rateGame,
+        // ),
+        // _divider(),
         // FIX #16: Now calls game.resetProgress()
         _ActionRow(
           icon: Icons.restore_rounded,
@@ -224,6 +227,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     return _SettingsCard(
       children: [
         // FIX #14: Uses url_launcher mailto
+        // _ActionRow(
+        //   icon: Icons.bug_report_rounded,
+        //   iconColor: const Color(0xFFFF9F1C),
+        //   title: 'Send Feedback',
+        //   subtitle: 'Report bugs or suggest features',
+        //   onTap: _sendFeedback,
+        // ),
+        // _divider(),
         _ActionRow(
           icon: Icons.bug_report_rounded,
           iconColor: const Color(0xFFFF9F1C),
@@ -239,23 +250,23 @@ class _SettingsScreenState extends State<SettingsScreen>
           subtitle: 'Learn the rules and mechanics',
           onTap: () => _showHowToPlay(context),
         ),
-        _divider(),
-        // FIX #15: Uses url_launcher
-        _ActionRow(
-          icon: Icons.privacy_tip_rounded,
-          iconColor: const Color(0xFF9B5DE5),
-          title: 'Privacy Policy',
-          subtitle: 'How we handle your data',
-          onTap: () => _openUrl('https://yourwebsite.com/privacy'),
-        ),
-        _divider(),
-        _ActionRow(
-          icon: Icons.gavel_rounded,
-          iconColor: const Color(0xFF607D8B),
-          title: 'Terms of Service',
-          subtitle: 'Usage terms and conditions',
-          onTap: () => _openUrl('https://yourwebsite.com/terms'),
-        ),
+        // _divider(),
+        // // FIX #15: Uses url_launcher
+        // _ActionRow(
+        //   icon: Icons.privacy_tip_rounded,
+        //   iconColor: const Color(0xFF9B5DE5),
+        //   title: 'Privacy Policy',
+        //   subtitle: 'How we handle your data',
+        //   onTap: () => _openUrl('https://yourwebsite.com/privacy'),
+        // ),
+        // _divider(),
+        // _ActionRow(
+        //   icon: Icons.gavel_rounded,
+        //   iconColor: const Color(0xFF607D8B),
+        //   title: 'Terms of Service',
+        //   subtitle: 'Usage terms and conditions',
+        //   onTap: () => _openUrl('https://yourwebsite.com/terms'),
+        // ),
       ],
     );
   }
@@ -275,21 +286,21 @@ class _SettingsScreenState extends State<SettingsScreen>
           icon: Icons.tag_rounded,
           iconColor: const Color(0xFF4CC9F0),
           title: 'Version',
-          value: '2.0.0 (build 1)',
+          value: '1.0.0 (build 1)',
         ),
         _divider(),
         _InfoRow(
           icon: Icons.person_rounded,
           iconColor: const Color(0xFF80FFDB),
           title: 'Developer',
-          value: 'Your Studio Name',
+          value: 'AlphaY',
         ),
         _divider(),
         _InfoRow(
           icon: Icons.mail_rounded,
           iconColor: const Color(0xFFFFD166),
           title: 'Contact',
-          value: 'support@yourgame.com',
+          value: GameConstants.developerEmail,
         ),
       ],
     );
@@ -299,24 +310,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Center(
       child: Column(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF4361EE), Color(0xFF7B2FBE)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Center(
-              child: Text(
-                '→',
-                style: TextStyle(fontSize: 24, color: Colors.white),
-              ),
-            ),
-          ),
+          SvgPicture.asset(GameAssets.gameLogoSvg, height: 70),
+
           const SizedBox(height: 10),
           const Text(
             'TAP AWAY',
@@ -329,7 +324,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           const SizedBox(height: 4),
           const Text(
-            'Made with ❤️  •  v2.0.0',
+            'Made with ❤️',
             style: TextStyle(color: Color(0xFF3A3A5A), fontSize: 11),
           ),
         ],
@@ -363,7 +358,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   // FIX #14
   Future<void> _sendFeedback() async {
     final uri = Uri.parse(
-      'mailto:support@yourgame.com?subject=Tap%20Away%20Feedback&body=Version%202.0.0',
+      'mailto:${GameConstants.developerEmail}?subject=Tap%20Away%20Feedback&body=Version%1.0.0(1)',
     );
     await launchUrl(uri);
   }

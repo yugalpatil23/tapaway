@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:tapaway/utils/game_assets.dart';
 import 'home_screen.dart';
 import '../audio/audio_manager.dart';
 
@@ -166,37 +168,7 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ],
       ),
-      child: AnimatedBuilder(
-        animation: _arrowCtrl,
-        builder: (_, __) {
-          return Stack(
-            alignment: Alignment.center,
-            children: [
-              // Orbiting small arrows
-              for (int i = 0; i < 4; i++)
-                Transform.rotate(
-                  angle: _arrowRotate.value * 2 * 3.14159 + i * 3.14159 / 2,
-                  child: Transform.translate(
-                    offset: const Offset(0, -32),
-                    child: const Text(
-                      '→',
-                      style: TextStyle(fontSize: 14, color: Colors.white54),
-                    ),
-                  ),
-                ),
-              // Center main arrow
-              const Text(
-                '→',
-                style: TextStyle(
-                  fontSize: 48,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+      child: SvgPicture.asset(GameAssets.gameLogoSvg),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'arrow_block.dart';
 
@@ -54,7 +55,6 @@ class LevelGenerator {
   static GameLevel generate(int level) {
     // Use a seeded RNG per level for reproducibility
     final rng = Random(level * 31337 + 7);
-
     final gridSize = _gridSize(level);
     final difficulty = _difficulty(level);
     final themePair = _themePair(level);
@@ -75,12 +75,13 @@ class LevelGenerator {
 
   static int _gridSize(int level) {
     if (level <= 3) return 4; // Levels   1–3   → 4×4  (3 levels,  Cyan)
-    if (level <= 10) return 5; // Levels   4–10  → 5×5  (7 levels,  Green)
-    if (level <= 22) return 6; // Levels  11–22  → 6×6  (12 levels, Yellow)
-    if (level <= 50) return 7; // Levels  23–50  → 7×7
-    if (level <= 150) return 8; // Levels  51–150 → 8×8
-    if (level <= 400) return 9; // Levels 151–400 → 9×9
-    return 10; // Levels 401–1000 → 10×10
+    if (level <= 7) return 6; // Levels   4–10  → 5×5  (7 levels,  Green)
+    if (level <= 10) return 8; // Levels   4–10  → 5×5  (7 levels,  Green)
+    if (level <= 17) return 12; // Levels  11–27  → 6×6  (17 levels, Yellow)
+    if (level <= 25) return 18; // Levels  28–50  → 7×7
+    if (level <= 32) return 22; // Levels  51–150 → 8×8
+    if (level <= 45) return 27; // Levels 151–400 → 9×9
+    return 30; // Levels 401–1000 → 10×10
   }
 
   static String _difficulty(int level) {
@@ -138,9 +139,10 @@ class LevelGenerator {
 
   // ── Core generation ──────────────────────────────────────────────────────────
   static List<ArrowBlock> _buildLevel(int level, int gridSize, Random rng) {
-    final density = 0.30 + (level - 1) * (0.50 / 999.0);
+    // final density = 0.30 + (level - 1) * (0.50 / 999.0);
     final totalCells = gridSize * gridSize;
-    final blockCount = (totalCells * density).round().clamp(3, totalCells);
+    // final blockCount = (totalCells * density).round().clamp(3, totalCells);
+    final blockCount = totalCells;
     final colors = _blockColors(level, rng);
     final darks = _blockDark(level);
 

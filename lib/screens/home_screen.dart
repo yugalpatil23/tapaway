@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
 import '../models/game_state.dart';
 import '../audio/audio_manager.dart';
+import '../utils/game_assets.dart';
 import '../widgets/level_cell.dart';
 import 'game_screen.dart';
 import 'settings_screen.dart';
@@ -96,31 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       children: [
         // App icon
-        Container(
-          width: 86,
-          height: 86,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF4361EE), Color(0xFF7B2FBE)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF4361EE).withOpacity(0.5),
-                blurRadius: 24,
-                spreadRadius: 4,
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Text(
-              '→',
-              style: TextStyle(fontSize: 42, color: Colors.white),
-            ),
-          ),
-        ),
+        SvgPicture.asset(GameAssets.gameLogoSvg, height: 70),
         const SizedBox(height: 16),
         ShaderMask(
           shaderCallback: (b) => const LinearGradient(
@@ -336,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              ['Hard', 'Harder', 'Hardest'][i],
+                              ['LVL 1', 'LVL 2', 'LVL 3'][i],
                               style: TextStyle(
                                 color: done
                                     ? const Color(0xFF4CAF50)

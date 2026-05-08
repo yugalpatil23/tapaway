@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="bgGrad" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#2B2D6E"/>
+      <stop offset="100%" stop-color="#0A0A1A"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4361EE" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#4361EE" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="iconBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E2070"/>
+      <stop offset="50%" stop-color="#4361EE"/>
+      <stop offset="100%" stop-color="#7B2FBE"/>
+    </linearGradient>
+    <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#C8D4FF"/>
+    </linearGradient>
+    <linearGradient id="b1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4CC9F0"/>
+      <stop offset="100%" stop-color="#023E8A"/>
+    </linearGradient>
+    <linearGradient id="b2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B9D"/>
+      <stop offset="100%" stop-color="#8B0038"/>
+    </linearGradient>
+    <linearGradient id="b3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#80FFDB"/>
+      <stop offset="100%" stop-color="#0F6E47"/>
+    </linearGradient>
+    <linearGradient id="b4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD166"/>
+      <stop offset="100%" stop-color="#8B5A00"/>
+    </linearGradient>
+    <linearGradient id="b5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A29BFE"/>
+      <stop offset="100%" stop-color="#3D2D9E"/>
+    </linearGradient>
+    <linearGradient id="b6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF9F1C"/>
+      <stop offset="100%" stop-color="#8B4500"/>
+    </linearGradient>
+    <clipPath id="clip">
+      <rect width="1024" height="1024" rx="220"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="220" fill="url(#iconBg)"/>
+
+  <!-- Clipped content -->
+  <g clip-path="url(#clip)">
+    <!-- Dark overlay for depth -->
+    <rect width="1024" height="1024" fill="#0D0D2A" fill-opacity="0.35"/>
+
+    <!-- Grid cells (6×6 subtle alternating) -->
+    <!-- Row 1 -->
+    <rect x="14"  y="14"  width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="172" y="14"  width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="330" y="14"  width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="488" y="14"  width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="646" y="14"  width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="804" y="14"  width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <!-- Row 2 -->
+    <rect x="14"  y="172" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="172" y="172" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="330" y="172" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="488" y="172" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="646" y="172" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="804" y="172" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <!-- Row 3 -->
+    <rect x="14"  y="330" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="172" y="330" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="488" y="330" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="646" y="330" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="804" y="330" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <!-- Row 4 -->
+    <rect x="14"  y="488" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="172" y="488" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="330" y="488" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="488" y="488" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="804" y="488" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <!-- Row 5 -->
+    <rect x="14"  y="646" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="330" y="646" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="488" y="646" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="646" y="646" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="804" y="646" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <!-- Row 6 -->
+    <rect x="14"  y="804" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="172" y="804" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="330" y="804" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="488" y="804" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+    <rect x="646" y="804" width="154" height="154" rx="12" fill="#111128" fill-opacity="0.55"/>
+    <rect x="804" y="804" width="154" height="154" rx="12" fill="#161630" fill-opacity="0.55"/>
+
+    <!-- Colored arrow blocks -->
+    <!-- Cyan → right (top-left) -->
+    <rect x="24" y="24" width="133" height="133" rx="26" fill="url(#b1)"/>
+    <line x1="54"  y1="90" x2="124" y2="90" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <polyline points="98,64 126,90 98,116" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Pink → up (top 2nd) -->
+    <rect x="182" y="24" width="133" height="133" rx="26" fill="url(#b2)"/>
+    <line x1="249" y1="134" x2="249" y2="60" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <polyline points="222,88 249,58 276,88" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Yellow → left (top 4th) -->
+    <rect x="498" y="24" width="133" height="133" rx="26" fill="url(#b4)"/>
+    <line x1="619" y1="90" x2="548" y2="90" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <polyline points="575,64 546,90 575,116" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Purple → down (top 5th) -->
+    <rect x="656" y="24" width="133" height="133" rx="26" fill="url(#b5)"/>
+    <line x1="722" y1="56" x2="722" y2="130" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <polyline points="695,104 722,132 749,104" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Orange → right (row 2, left) -->
+    <rect x="24" y="182" width="133" height="133" rx="26" fill="url(#b6)"/>
+    <line x1="54"  y1="248" x2="124" y2="248" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <polyline points="98,222 126,248 98,274" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Green → up (row 2, 4th) -->
+    <rect x="498" y="182" width="133" height="133" rx="26" fill="url(#b3)"/>
+    <line x1="565" y1="292" x2="565" y2="218" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <polyline points="538,246 565,216 592,246" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Cyan → down (row 3, left) -->
+    <rect x="24" y="340" width="133" height="133" rx="26" fill="url(#b1)"/>
+    <line x1="90" y1="362" x2="90" y2="452" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <polyline points="63,424 90,454 117,424" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Pink → left (row 3, 2nd) -->
+    <rect x="182" y="340" width="133" height="133" rx="26" fill="url(#b2)"/>
+    <line x1="303" y1="406" x2="218" y2="406" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <polyline points="246,380 216,406 246,432" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Purple → right (row 4, 5th) -->
+    <rect x="656" y="498" width="133" height="133" rx="26" fill="url(#b5)"/>
+    <line x1="686" y1="564" x2="776" y2="564" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <polyline points="750,538 778,564 750,590" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Orange → up (row 5, 2nd) -->
+    <rect x="182" y="656" width="133" height="133" rx="26" fill="url(#b6)"/>
+    <line x1="249" y1="766" x2="249" y2="692" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <polyline points="222,720 249,690 276,720" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Green → right (row 6, 4th) -->
+    <rect x="498" y="814" width="133" height="133" rx="26" fill="url(#b3)"/>
+    <line x1="528" y1="880" x2="618" y2="880" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <polyline points="592,854 620,880 592,906" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Central radial glow behind main arrow -->
+    <ellipse cx="512" cy="512" rx="320" ry="320" fill="url(#glow)"/>
+
+    <!-- Main hero arrow — big, centered, bold -->
+    <!-- Shaft -->
+    <line x1="512" y1="700" x2="512" y2="380" stroke="url(#arrowGrad)" stroke-width="72" stroke-linecap="round"/>
+    <!-- Head -->
+    <polyline points="340,500 512,325 684,500" stroke="url(#arrowGrad)" stroke-width="72" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Top shine -->
+    <rect width="1024" height="280" fill="white" fill-opacity="0.05" rx="220"/>
+  </g>
+
+  <!-- Outer border shine -->
+  <rect width="1024" height="1024" rx="220" fill="none" stroke="white" stroke-opacity="0.12" stroke-width="3"/>
+</svg>
