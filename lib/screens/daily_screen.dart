@@ -42,12 +42,23 @@ class _DailyScreenState extends State<DailyScreen> {
     // Wire up after first frame so _game is guaranteed initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _game.onSound = AudioManager().play;
-      _game.onLevelComplete = (_) async {
+      // onLevelComplete is already deferred to next frame by GameState._checkComplete()
+      // but we add another postFrameCallback here for the async star-award work
+      // to ensure we never call setState or notifyListeners while tree is locked
+      _game.onLevelComplete = (_) {
         if (_awardingStars) return;
         _awardingStars = true;
         AudioManager().haptic(HapticType.heavy);
-        final earned = await daily.completeDailyLevel(widget.slot);
-        if (earned > 0) _game.addBonusStars(earned);
+        // Use microtask to fully escape the current build/notify cycle
+        Future.microtask(() async {
+          if (!mounted) return;
+          final earned = await daily.completeDailyLevel(widget.slot);
+          if (!mounted) return;
+          if (earned > 0) {
+            // addBonusStars already defers its notifyListeners — safe
+            _game.addBonusStars(earned);
+          }
+        });
       };
       _game.loadDailyLevel(level, slot: widget.slot);
     });
@@ -55,8 +66,7 @@ class _DailyScreenState extends State<DailyScreen> {
 
   @override
   void dispose() {
-    // Use stored reference — context.read() is illegal in dispose()
-    _game.exitDailyMode();
+    _game.exitDailyMode(); // only flips flags, no notifyListeners
     super.dispose();
   }
 

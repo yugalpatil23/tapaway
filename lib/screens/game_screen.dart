@@ -28,7 +28,11 @@ class _GameScreenState extends State<GameScreen> {
     // Wire sound callbacks into GameState
     game.onSound = AudioManager().play;
     // FIX #7: Haptics now go through AudioManager so hapticsEnabled is respected
-    game.onLevelComplete = (_) => AudioManager().haptic(HapticType.heavy);
+    game.onLevelComplete = (_) {
+      // Use microtask — callback arrives via addPostFrameCallback in GameState
+      // but haptic is safe to call immediately
+      AudioManager().haptic(HapticType.heavy);
+    };
   }
 
   // dispose() no longer needs to clean up _hintGlowCtrl (it's gone)

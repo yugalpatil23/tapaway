@@ -118,6 +118,9 @@ class GameState extends ChangeNotifier {
   // ── Tap logic ────────────────────────────────────────────────────────────────
   Future<void> tapBlock(ArrowBlock block) async {
     if (_isAnimating || _levelComplete || block.isRemoved) return;
+    // Guard: block must exist in current _blocks list.
+    // Stale references from a previous level cause RangeError(-1) otherwise.
+    if (_indexOf(block) < 0) return;
 
     if (!canSlide(block)) {
       // Shake the block + blocked sound
@@ -194,10 +197,11 @@ class GameState extends ChangeNotifier {
     _starsEarned = _calcStars();
 
     if (_isDailyMode) {
-      // ── Daily mode: stars are awarded externally by DailyChallenge flow ──────
-      // Do NOT modify main-level stars, do NOT unlock next main level.
-      // Just signal completion so the UI can show the level-complete overlay.
-      onLevelComplete?.call(true);
+      // Defer callback to next frame — firing it inside notifyListeners()
+      // causes setState-during-build crash (tree is locked at this point)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        onLevelComplete?.call(true);
+      });
       return;
     }
 
@@ -215,7 +219,10 @@ class GameState extends ChangeNotifier {
     }
 
     _saveProgress();
-    onLevelComplete?.call(true);
+    // Also defer normal-mode callback for consistency
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      onLevelComplete?.call(true);
+    });
   }
 
   int _calcStars() {
@@ -244,18 +251,24 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Returns to normal mode and reloads the current main level.
+  /// Returns to normal mode. Does NOT call loadLevel() or notifyListeners()
+  /// because this is called from dispose() — tree is locked at that point.
+  /// The home screen re-renders naturally when navigation pops.
   void exitDailyMode() {
     _isDailyMode = false;
     _dailySlot = 0;
-    loadLevel(_currentLevelNumber);
+    _isAnimating = false;
+    _levelComplete = false;
+    // Intentionally NO loadLevel() or notifyListeners() here —
+    // calling either during dispose() crashes with "tree locked".
   }
 
   /// Add bonus stars (e.g. from completing the daily challenge)
   void addBonusStars(int bonus) {
     _totalStars += bonus;
     _saveProgress();
-    notifyListeners();
+    // Defer to avoid setState-during-build if called from completion callback
+    WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
   }
 
   // ── Reset all progress ────────────────────────────────────────────────────
