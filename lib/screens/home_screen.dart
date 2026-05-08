@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/game_state.dart';
 import '../audio/audio_manager.dart';
+import '../widgets/level_cell.dart';
 import 'game_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -246,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen>
         final stars = game.levelStars[level] ?? 0;
         final unlocked = level <= game.highestUnlocked;
         final isCurrent = level == game.highestUnlocked;
-        return _LevelCell(
+        return LevelCell(
           // Key by level number so Flutter reuses cells correctly
           key: ValueKey(level),
           level: level,
@@ -353,114 +354,6 @@ class _IconBtn extends StatelessWidget {
           border: Border.all(color: Colors.white.withOpacity(0.1)),
         ),
         child: Icon(icon, color: Colors.white70, size: 20),
-      ),
-    );
-  }
-}
-
-class _LevelCell extends StatelessWidget {
-  final int level;
-  final int stars;
-  final bool unlocked;
-  final bool isCurrent;
-  final VoidCallback? onTap;
-
-  const _LevelCell({
-    super.key,
-    required this.level,
-    required this.stars,
-    required this.unlocked,
-    required this.isCurrent,
-    this.onTap,
-  });
-
-  // Pre-computed accent colours — no branching in build()
-  static const _accents = [
-    Color(0xFF4CC9F0), // Easy   lv 1–50
-    Color(0xFF80FFDB), // Medium lv 51–200
-    Color(0xFFFFD166), // Hard   lv 201–500
-    Color(0xFFFF6B9D), // Expert lv 501–1000
-  ];
-
-  Color get _accent {
-    if (level <= 50) return _accents[0];
-    if (level <= 200) return _accents[1];
-    if (level <= 500) return _accents[2];
-    return _accents[3];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = _accent;
-    // Pre-resolve all colours once — avoids repeated withOpacity() in build
-    final bgColor = isCurrent
-        ? Color.fromRGBO(accent.red, accent.green, accent.blue, 0.20)
-        : unlocked
-        ? const Color(0x0FFFFFFF)
-        : const Color(0x05FFFFFF);
-    final borderColor = isCurrent
-        ? accent
-        : unlocked
-        ? Color.fromRGBO(accent.red, accent.green, accent.blue, 0.25)
-        : const Color(0x0DFFFFFF);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor, width: isCurrent ? 2 : 1),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (!unlocked)
-              const Icon(Icons.lock, size: 14, color: Color(0xFF4A4A6A))
-            else
-              Text(
-                '$level',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            if (stars > 0) ...[
-              const SizedBox(height: 3),
-              // Fixed-width Row avoids layout recalculation — 3 icons always same size
-              SizedBox(
-                width: 33,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _StarDot(filled: stars >= 1),
-                    _StarDot(filled: stars >= 2),
-                    _StarDot(filled: stars >= 3),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Tiny coloured dot — cheaper than Icon widget for 3000 star slots
-class _StarDot extends StatelessWidget {
-  final bool filled;
-  const _StarDot({required this.filled});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: filled ? const Color(0xFFFFD60A) : const Color(0xFF2A2A45),
-        shape: BoxShape.circle,
       ),
     );
   }
