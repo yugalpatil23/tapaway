@@ -5,6 +5,8 @@ import '../models/game_state.dart';
 import '../audio/audio_manager.dart';
 import '../widgets/level_cell.dart';
 import 'game_screen.dart';
+import 'settings_screen.dart';
+import '../models/daily_challenge.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,23 +17,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _shimmerCtrl;
-
   @override
   void initState() {
     super.initState();
-    _shimmerCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AudioManager().playBgMusic();
+      DailyChallenge().init();
     });
   }
 
   @override
   void dispose() {
-    _shimmerCtrl.dispose();
     super.dispose();
   }
 
@@ -52,6 +48,8 @@ class _HomeScreenState extends State<HomeScreen>
                     const SizedBox(height: 8),
                     _buildHero(game),
                     const SizedBox(height: 20),
+                    _buildDailyBanner(),
+                    const SizedBox(height: 12),
                     _buildSectionTitle('SELECT LEVEL'),
                     const SizedBox(height: 10),
                     Expanded(child: _buildLevelGrid(context, game)),
@@ -81,24 +79,13 @@ class _HomeScreenState extends State<HomeScreen>
             label: '${game.totalStars}',
           ),
           const Spacer(),
-          // Music toggle
+          // Settings button
           _IconBtn(
-            icon: AudioManager().musicEnabled
-                ? Icons.music_note
-                : Icons.music_off,
-            onTap: () {
-              setState(() => AudioManager().toggleMusic());
-            },
-          ),
-          const SizedBox(width: 8),
-          // Sound toggle
-          _IconBtn(
-            icon: AudioManager().soundEnabled
-                ? Icons.volume_up
-                : Icons.volume_off,
-            onTap: () {
-              setState(() => AudioManager().toggleSound());
-            },
+            icon: Icons.settings_rounded,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
           ),
         ],
       ),
@@ -202,6 +189,146 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDailyBanner() {
+    return ListenableBuilder(
+      listenable: DailyChallenge(),
+      builder: (_, __) {
+        final daily = DailyChallenge();
+        return GestureDetector(
+          onTap: () {
+            // TODO: open daily challenge game screen
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  daily.completedToday
+                      ? 'Daily complete! Come back tomorrow ✅'
+                      : 'Daily Challenge — ${daily.todayBonusStars}★ reward!',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                backgroundColor: const Color(0xFF1E1E38),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                margin: const EdgeInsets.all(16),
+              ),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: daily.completedToday
+                    ? [const Color(0xFF1E2A1E), const Color(0xFF162016)]
+                    : [const Color(0xFF1A1A2E), const Color(0xFF16213E)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: daily.completedToday
+                    ? const Color(0xFF4CAF50).withOpacity(0.4)
+                    : const Color(0xFFFFD60A).withOpacity(0.35),
+              ),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  daily.completedToday ? '✅' : '⚡',
+                  style: const TextStyle(fontSize: 28),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            daily.completedToday
+                                ? 'COMPLETED'
+                                : 'DAILY CHALLENGE',
+                            style: TextStyle(
+                              color: daily.completedToday
+                                  ? const Color(0xFF4CAF50)
+                                  : const Color(0xFFFFD60A),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          if (daily.streak > 0) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF6B35).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFFFF6B35,
+                                  ).withOpacity(0.4),
+                                ),
+                              ),
+                              child: Text(
+                                '🔥 \${daily.streak}d streak',
+                                style: const TextStyle(
+                                  color: Color(0xFFFF6B35),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        daily.completedToday
+                            ? 'Come back tomorrow for a new puzzle'
+                            : 'Earn +\${daily.todayBonusStars}★ bonus stars today',
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!daily.completedToday)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFD60A), Color(0xFFFF9F1C)],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'PLAY',
+                      style: TextStyle(
+                        color: Color(0xFF1A1A00),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 11,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

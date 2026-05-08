@@ -27,11 +27,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-    _hintGlowCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-
     final game = context.read<GameState>();
     game.onSound = (name) => AudioManager().play(name);
     game.onLevelComplete = (_) {
@@ -41,7 +36,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _hintGlowCtrl.dispose();
     super.dispose();
   }
 

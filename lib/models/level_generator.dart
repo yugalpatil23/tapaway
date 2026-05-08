@@ -21,8 +21,6 @@ class GameLevel {
 }
 
 class LevelGenerator {
-  static final Random _rng = Random(42); // seeded so levels are reproducible
-
   // ── Colour palettes per difficulty ──────────────────────────────────────────
   static const _easyPalette = [
     [Color(0xFF4CC9F0), Color(0xFF023E8A)],

@@ -43,7 +43,12 @@ class GameState extends ChangeNotifier {
   int get hintsAvailable => (_totalStars ~/ kHintStarCost);
 
   GameState() {
-    _loadProgress().then((_) => loadLevel(_currentLevelNumber));
+    _loadProgress().then((_) {
+      // Defer until after first frame to avoid setState-during-build
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => loadLevel(_currentLevelNumber),
+      );
+    });
   }
 
   // ── Persistence ──────────────────────────────────────────────────────────────
