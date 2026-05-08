@@ -54,7 +54,7 @@ class GameState extends ChangeNotifier {
   /// True when blocks remain but NONE can slide — puzzle is deadlocked.
   /// Triggers UI to show restart prompt instead of leaving player stranded.
   bool get isDeadlocked {
-    if (_levelComplete || _isAnimating) return false;
+    if (_levelComplete) return false;
     final remaining = _blocks.where((b) => !b.isRemoved).toList();
     if (remaining.isEmpty) return false;
     return remaining.every((b) => !canSlide(b));
@@ -117,22 +117,23 @@ class GameState extends ChangeNotifier {
 
   // ── Tap logic ────────────────────────────────────────────────────────────────
   Future<void> tapBlock(ArrowBlock block) async {
-    if (_isAnimating || _levelComplete || block.isRemoved) return;
-    // Guard: block must exist in current _blocks list.
-    // Stale references from a previous level cause RangeError(-1) otherwise.
-    if (_indexOf(block) < 0) return;
+    // Allow multiple simultaneous slides — only block if level done
+    // or if THIS specific block is already sliding/removed.
+    if (_levelComplete || block.isRemoved || block.isSliding) return;
+
+    // Guard: stale block reference from previous level
+    final idx = _indexOf(block);
+    if (idx < 0) return;
 
     if (!canSlide(block)) {
-      // Shake the block + blocked sound
       _shakeBlock(block);
       onSound?.call('blocked');
       return;
     }
 
-    _isAnimating = true;
     _moves++;
 
-    final idx = _indexOf(block);
+    // Mark this block as sliding immediately
     _blocks[idx] = _blocks[idx].copyWith(isSliding: true);
     notifyListeners();
 
@@ -140,8 +141,14 @@ class GameState extends ChangeNotifier {
 
     await Future.delayed(const Duration(milliseconds: 620));
 
-    _blocks[idx] = _blocks[idx].copyWith(isSliding: false, isRemoved: true);
-    _isAnimating = false;
+    // Re-check index in case something changed during the await
+    final currentIdx = _indexOf(block);
+    if (currentIdx >= 0) {
+      _blocks[currentIdx] = _blocks[currentIdx].copyWith(
+        isSliding: false,
+        isRemoved: true,
+      );
+    }
 
     _checkComplete();
     notifyListeners();
