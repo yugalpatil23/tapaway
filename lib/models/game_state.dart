@@ -13,17 +13,26 @@ class GameState extends ChangeNotifier {
   int _moves = 0;
   bool _isAnimating = false;
   bool _levelComplete = false;
-  int _starsEarned = 0; // stars earned THIS level
+  int _starsEarned = 0;
+
+  // ── Daily mode flag ───────────────────────────────────────────────────────────
+  // When true, completion does NOT touch main-level progress or unlock chain.
+  // Stars are awarded externally by the daily challenge flow.
+  bool _isDailyMode = false;
+  int _dailySlot = 0; // which daily level (1,2,3) is being played
+
+  bool get isDailyMode => _isDailyMode;
+  int get dailySlot => _dailySlot;
 
   // ── Global progress ──────────────────────────────────────────────────────────
   int _currentLevelNumber = 1;
-  int _highestUnlocked = 1; // next playable
+  int _highestUnlocked = 1;
   int _totalStars = 0;
-  Map<int, int> _levelStars = {}; // level → stars earned (1‥3)
+  Map<int, int> _levelStars = {};
 
-  // ── Audio callback (set by audio manager) ────────────────────────────────────
+  // ── Audio callback ────────────────────────────────────────────────────────────
   void Function(String)? onSound;
-  void Function(bool)? onLevelComplete; // true = success
+  void Function(bool)? onLevelComplete;
 
   // ── Getters ──────────────────────────────────────────────────────────────────
   GameLevel get currentLevel => _currentLevel;
@@ -41,6 +50,15 @@ class GameState extends ChangeNotifier {
 
   // Hints remaining (deducted from total stars)
   int get hintsAvailable => (_totalStars ~/ kHintStarCost);
+
+  /// True when blocks remain but NONE can slide — puzzle is deadlocked.
+  /// Triggers UI to show restart prompt instead of leaving player stranded.
+  bool get isDeadlocked {
+    if (_levelComplete || _isAnimating) return false;
+    final remaining = _blocks.where((b) => !b.isRemoved).toList();
+    if (remaining.isEmpty) return false;
+    return remaining.every((b) => !canSlide(b));
+  }
 
   GameState() {
     _loadProgress().then((_) {
@@ -175,7 +193,15 @@ class GameState extends ChangeNotifier {
     _levelComplete = true;
     _starsEarned = _calcStars();
 
-    // Only update if better than previous
+    if (_isDailyMode) {
+      // ── Daily mode: stars are awarded externally by DailyChallenge flow ──────
+      // Do NOT modify main-level stars, do NOT unlock next main level.
+      // Just signal completion so the UI can show the level-complete overlay.
+      onLevelComplete?.call(true);
+      return;
+    }
+
+    // ── Normal mode ─────────────────────────────────────────────────────────────
     final prev = _levelStars[_currentLevelNumber] ?? 0;
     if (_starsEarned > prev) {
       final gain = _starsEarned - prev;
@@ -183,7 +209,6 @@ class GameState extends ChangeNotifier {
       _levelStars[_currentLevelNumber] = _starsEarned;
     }
 
-    // Unlock next level
     if (_currentLevelNumber >= _highestUnlocked &&
         _currentLevelNumber < kTotalLevels) {
       _highestUnlocked = _currentLevelNumber + 1;
@@ -203,4 +228,43 @@ class GameState extends ChangeNotifier {
   // ── Milestone ────────────────────────────────────────────────────────────────
   /// True if this completion hits a multiple-of-5 level milestone
   bool get isMilestone => _currentLevelNumber % 5 == 0;
+
+  // ── Daily challenge support ───────────────────────────────────────────────
+  /// Load a daily challenge level. Sets isDailyMode = true so completion
+  /// does NOT pollute main-level progress or unlock chain.
+  void loadDailyLevel(GameLevel level, {int slot = 1}) {
+    _isDailyMode = true;
+    _dailySlot = slot;
+    _moves = 0;
+    _levelComplete = false;
+    _isAnimating = false;
+    _starsEarned = 0;
+    _currentLevel = level;
+    _blocks = List.from(level.blocks);
+    notifyListeners();
+  }
+
+  /// Returns to normal mode and reloads the current main level.
+  void exitDailyMode() {
+    _isDailyMode = false;
+    _dailySlot = 0;
+    loadLevel(_currentLevelNumber);
+  }
+
+  /// Add bonus stars (e.g. from completing the daily challenge)
+  void addBonusStars(int bonus) {
+    _totalStars += bonus;
+    _saveProgress();
+    notifyListeners();
+  }
+
+  // ── Reset all progress ────────────────────────────────────────────────────
+  Future<void> resetProgress() async {
+    _currentLevelNumber = 1;
+    _highestUnlocked = 1;
+    _totalStars = 0;
+    _levelStars = {};
+    await _saveProgress();
+    loadLevel(1);
+  }
 }

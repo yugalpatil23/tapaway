@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/game_state.dart';
-import '../models/arrow_block.dart';
 import '../audio/audio_manager.dart';
 import '../utils/functions_utility.dart';
 import '../widgets/game_grid.dart';
@@ -18,26 +16,22 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
+class _GameScreenState extends State<GameScreen> {
+  // FIX #5 & #17: Removed 'late AnimationController _hintGlowCtrl' —
+  // it was declared but never initialised → LateInitializationError on dispose
   String? _hintedBlockId;
-  late AnimationController _hintGlowCtrl;
 
   @override
   void initState() {
     super.initState();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
     final game = context.read<GameState>();
-    game.onSound = (name) => AudioManager().play(name);
-    game.onLevelComplete = (_) {
-      HapticFeedback.heavyImpact();
-    };
+    // Wire sound callbacks into GameState
+    game.onSound = AudioManager().play;
+    // FIX #7: Haptics now go through AudioManager so hapticsEnabled is respected
+    game.onLevelComplete = (_) => AudioManager().haptic(HapticType.heavy);
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  // dispose() no longer needs to clean up _hintGlowCtrl (it's gone)
 
   void _useHint() {
     final game = context.read<GameState>();
@@ -48,7 +42,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final block = game.useHint();
     if (block != null) {
       AudioManager().play('hint');
-      HapticFeedback.mediumImpact();
+      // FIX #7: haptic respects user pref
+      AudioManager().haptic(HapticType.medium);
       setState(() => _hintedBlockId = block.id);
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) setState(() => _hintedBlockId = null);
@@ -90,11 +85,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           backgroundColor: const Color(0xFF0D0D1A),
           body: Stack(
             children: [
-              // Content
               Column(
                 children: [
                   _buildTopBar(ctx, game, tc),
-                  // Hint + progress strip just below top bar
                   _buildHintAndProgress(ctx, game, tc),
                   Expanded(
                     child: Padding(
@@ -106,7 +99,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         children: [
                           _buildMidStats(game, tc),
                           const SizedBox(height: 12),
-                          // Grid — takes all remaining space
                           Expanded(
                             child: Center(
                               child: AspectRatio(
@@ -115,7 +107,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                               ),
                             ),
                           ),
-                          // Bottom is clean — no widgets here
                           const SizedBox(height: 10),
                         ],
                       ),
@@ -123,10 +114,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ),
                 ],
               ),
-
-              // Level complete
               if (game.levelComplete)
                 const Positioned.fill(child: LevelCompleteOverlay()),
+
+              // Deadlock banner — shown when no block can move
+              if (game.isDeadlocked)
+                Positioned(
+                  bottom: 24,
+                  left: 16,
+                  right: 16,
+                  child: _DeadlockBanner(onRestart: game.restartLevel),
+                ),
             ],
           ),
         );
@@ -141,13 +139,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            // Back
             TopBtn(
               icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => Navigator.pop(ctx),
             ),
             const SizedBox(width: 10),
-            // Level + difficulty
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,18 +169,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 ],
               ),
             ),
-            // Stars
             GlassChip(
               icon: Icons.star_rounded,
               iconColor: const Color(0xFFFFD60A),
               label: '${game.totalStars}',
             ),
             const SizedBox(width: 8),
-            // Restart
             TopBtn(
               icon: Icons.refresh_rounded,
               onTap: () {
-                HapticFeedback.lightImpact();
+                // FIX #7: haptic through AudioManager
+                AudioManager().haptic(HapticType.light);
                 game.restartLevel();
               },
             ),
@@ -221,20 +216,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  // Removed — merged into _buildHintAndProgress above the grid
-
-  /// Combined hint button + progress strip — sits between top bar and grid
   Widget _buildHintAndProgress(BuildContext ctx, GameState game, Color tc) {
     final total = game.currentLevel.blocks.length;
-    final remaining = game.blocks.length;
-    final done = total - remaining;
+    final done = total - game.blocks.length;
     final canHint = game.totalStars >= kHintStarCost;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
       child: Row(
         children: [
-          // ── Hint button ──────────────────────────────────────────────────
           GestureDetector(
             onTap: _useHint,
             child: Container(
@@ -275,7 +265,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(width: 10),
-          // ── Progress strip ───────────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,21 +294,24 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 const SizedBox(height: 5),
                 LayoutBuilder(
                   builder: (_, box) {
-                    final w = box.maxWidth;
-                    final cellW = (w - (total - 1) * 2) / total;
+                    // Fix overflow: use Expanded cells inside a Row so total
+                    // always equals exactly box.maxWidth — no clamp mismatch
                     return Row(
-                      children: List.generate(total, (i) {
-                        final cleared = i < done;
-                        return Container(
-                          width: cellW.clamp(2.0, 14.0),
-                          height: 5,
-                          margin: const EdgeInsets.only(right: 2),
-                          decoration: BoxDecoration(
-                            color: cleared ? tc : const Color(0xFF2A2A45),
-                            borderRadius: BorderRadius.circular(3),
+                      children: List.generate(
+                        total,
+                        (i) => Expanded(
+                          child: Container(
+                            height: 5,
+                            margin: EdgeInsets.only(
+                              right: i < total - 1 ? 2 : 0,
+                            ),
+                            decoration: BoxDecoration(
+                              color: i < done ? tc : const Color(0xFF2A2A45),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
                           ),
-                        );
-                      }),
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -327,6 +319,116 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Deadlock banner ───────────────────────────────────────────────────────────
+class _DeadlockBanner extends StatefulWidget {
+  final VoidCallback onRestart;
+  const _DeadlockBanner({required this.onRestart});
+
+  @override
+  State<_DeadlockBanner> createState() => _DeadlockBannerState();
+}
+
+class _DeadlockBannerState extends State<_DeadlockBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _slide = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _ctrl.forward();
+    // Also play a blocked sound to alert player
+    AudioManager().play('blocked');
+    AudioManager().haptic(HapticType.medium);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: Tween(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(_slide),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E38),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFFF4D6D).withOpacity(0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF4D6D).withOpacity(0.25),
+              blurRadius: 20,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Text('🔒', style: TextStyle(fontSize: 28)),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'No moves left!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'All remaining arrows are blocked.',
+                    style: TextStyle(color: Color(0xFF8B8FA8), fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: widget.onRestart,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF4D6D), Color(0xFFFF6B35)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Restart',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

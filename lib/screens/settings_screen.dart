@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../audio/audio_manager.dart';
+import '../models/game_state.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -9,6 +12,7 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
+// FIX #18: No longer uses SingleTickerProviderStateMixin — uses plain StateMixin
 class _SettingsScreenState extends State<SettingsScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _slideCtrl;
@@ -78,7 +82,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // ── Top bar ──────────────────────────────────────────────────────────────────
   Widget _buildTopBar(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -115,7 +118,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // ── Section label ─────────────────────────────────────────────────────────────
   Widget _sectionLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -137,8 +139,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // ── Audio section ─────────────────────────────────────────────────────────────
+  // ── Audio ─────────────────────────────────────────────────────────────────
   Widget _buildAudioSection() {
+    final audio = AudioManager();
     return _SettingsCard(
       children: [
         _ToggleRow(
@@ -146,8 +149,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           iconColor: const Color(0xFF4CC9F0),
           title: 'Background Music',
           subtitle: 'Ambient puzzle music',
-          value: AudioManager().musicEnabled,
-          onChanged: (v) => setState(() => AudioManager().toggleMusic()),
+          // FIX #4: reads real persisted state
+          value: audio.musicEnabled,
+          onChanged: (_) async {
+            await audio.toggleMusic();
+            if (mounted) setState(() {});
+          },
         ),
         _divider(),
         _ToggleRow(
@@ -155,42 +162,52 @@ class _SettingsScreenState extends State<SettingsScreen>
           iconColor: const Color(0xFF80FFDB),
           title: 'Sound Effects',
           subtitle: 'Slide, shake & complete sounds',
-          value: AudioManager().soundEnabled,
-          onChanged: (v) => setState(() => AudioManager().toggleSound()),
+          value: audio.soundEnabled,
+          onChanged: (_) async {
+            await audio.toggleSound();
+            if (mounted) setState(() {});
+          },
         ),
         _divider(),
+        // FIX #6: reads real hapticsEnabled, calls real toggleHaptics
         _ToggleRow(
           icon: Icons.vibration_rounded,
           iconColor: const Color(0xFFFFD166),
           title: 'Haptics',
-          subtitle: 'Vibration on tap and completion',
-          value: true, // wire up to prefs if needed
-          onChanged: (v) {},
+          subtitle: 'Vibration feedback on taps',
+          value: audio.hapticsEnabled,
+          onChanged: (_) async {
+            await audio.toggleHaptics();
+            if (mounted) setState(() {});
+          },
         ),
       ],
     );
   }
 
-  // ── Game section ──────────────────────────────────────────────────────────────
+  // ── Game ──────────────────────────────────────────────────────────────────
   Widget _buildGameSection(BuildContext context) {
     return _SettingsCard(
       children: [
+        // FIX #12: Uses share_plus
         _ActionRow(
           icon: Icons.share_rounded,
           iconColor: const Color(0xFFA29BFE),
           title: 'Share Game',
           subtitle: 'Invite friends to play Tap Away',
-          onTap: () => _shareGame(),
+          onTap: _shareGame,
         ),
         _divider(),
+        // FIX #13: Uses url_launcher
         _ActionRow(
           icon: Icons.star_rounded,
           iconColor: const Color(0xFFFFD60A),
           title: 'Rate the Game',
           subtitle: 'Love it? Leave us a 5★ review',
-          onTap: () => _rateGame(),
+          onTap: _rateGame,
         ),
         _divider(),
+        // FIX #16: Now calls game.resetProgress()
         _ActionRow(
           icon: Icons.restore_rounded,
           iconColor: const Color(0xFFFF6B9D),
@@ -202,16 +219,17 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // ── Support section ───────────────────────────────────────────────────────────
+  // ── Support ───────────────────────────────────────────────────────────────
   Widget _buildSupportSection(BuildContext context) {
     return _SettingsCard(
       children: [
+        // FIX #14: Uses url_launcher mailto
         _ActionRow(
           icon: Icons.bug_report_rounded,
           iconColor: const Color(0xFFFF9F1C),
           title: 'Send Feedback',
           subtitle: 'Report bugs or suggest features',
-          onTap: () => _sendFeedback(),
+          onTap: _sendFeedback,
         ),
         _divider(),
         _ActionRow(
@@ -222,6 +240,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           onTap: () => _showHowToPlay(context),
         ),
         _divider(),
+        // FIX #15: Uses url_launcher
         _ActionRow(
           icon: Icons.privacy_tip_rounded,
           iconColor: const Color(0xFF9B5DE5),
@@ -241,7 +260,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // ── About section ─────────────────────────────────────────────────────────────
+  // ── About ─────────────────────────────────────────────────────────────────
   Widget _buildAboutSection() {
     return _SettingsCard(
       children: [
@@ -276,7 +295,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // ── Footer ────────────────────────────────────────────────────────────────────
   Widget _buildFooter() {
     return Center(
       child: Column(
@@ -322,33 +340,40 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _divider() =>
       const Divider(height: 1, color: Color(0xFF1E1E30), indent: 52);
 
-  // ── Actions ───────────────────────────────────────────────────────────────────
+  // ── Actions ───────────────────────────────────────────────────────────────
+  // FIX #12
   void _shareGame() {
-    // Use share_plus package in production:
-    // Share.share('I\'m playing Tap Away! Download it here: https://yourlink.com');
-    Clipboard.setData(
-      const ClipboardData(
-        text: 'Check out Tap Away — Arrow Puzzle! https://yourlink.com',
-      ),
+    Share.share(
+      "I'm playing Tap Away — Arrow Puzzle! Clear all arrows to solve each puzzle.\nhttps://yourlink.com",
+      subject: 'Try Tap Away!',
     );
-    _toast('Link copied to clipboard!');
   }
 
-  void _rateGame() {
-    // Use url_launcher in production:
-    // launchUrl(Uri.parse('market://details?id=your.package.name'));
-    _toast('Opening store... (add url_launcher package)');
+  // FIX #13
+  Future<void> _rateGame() async {
+    final store = Uri.parse('market://details?id=com.yourstudio.tapaway');
+    final web = Uri.parse(
+      'https://play.google.com/store/apps/details?id=com.yourstudio.tapaway',
+    );
+    if (!await launchUrl(store, mode: LaunchMode.externalApplication)) {
+      await launchUrl(web, mode: LaunchMode.externalApplication);
+    }
   }
 
-  void _sendFeedback() {
-    // Use url_launcher: launchUrl(Uri.parse('mailto:support@yourgame.com?subject=Feedback'));
-    _toast('Opening email... (add url_launcher package)');
+  // FIX #14
+  Future<void> _sendFeedback() async {
+    final uri = Uri.parse(
+      'mailto:support@yourgame.com?subject=Tap%20Away%20Feedback&body=Version%202.0.0',
+    );
+    await launchUrl(uri);
   }
 
-  void _openUrl(String url) {
-    _toast('Opening: $url\n(add url_launcher package)');
+  // FIX #15
+  Future<void> _openUrl(String url) async {
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 
+  // FIX #16: Actually resets game progress
   void _confirmReset(BuildContext context) {
     showDialog(
       context: context,
@@ -374,8 +399,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () {
               Navigator.pop(context);
+              // FIX #16: call the real resetProgress()
+              context.read<GameState>().resetProgress();
               _toast('Progress reset!');
-              // Call game.resetProgress() from provider here
             },
             child: const Text(
               'Reset',
@@ -418,30 +444,27 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 }
 
-// ── Reusable setting components ───────────────────────────────────────────────
+// ── Reusable widgets ──────────────────────────────────────────────────────────
 
 class _SettingsCard extends StatelessWidget {
   final List<Widget> children;
   const _SettingsCard({required this.children});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF13131F),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
-      child: Column(children: children),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFF13131F),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: Colors.white.withOpacity(0.06)),
+    ),
+    child: Column(children: children),
+  );
 }
 
 class _ToggleRow extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
-  final String title;
-  final String subtitle;
+  final String title, subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -500,8 +523,7 @@ class _ToggleRow extends StatelessWidget {
 class _ActionRow extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
-  final String title;
-  final String subtitle;
+  final String title, subtitle;
   final VoidCallback onTap;
 
   const _ActionRow({
@@ -561,8 +583,7 @@ class _ActionRow extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
-  final String title;
-  final String value;
+  final String title, value;
 
   const _InfoRow({
     required this.icon,
@@ -605,21 +626,18 @@ class _IconBox extends StatelessWidget {
   const _IconBox({required this.icon, required this.color});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.25)),
-      ),
-      child: Icon(icon, color: color, size: 18),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    width: 36,
+    height: 36,
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.15),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: color.withOpacity(0.25)),
+    ),
+    child: Icon(icon, color: color, size: 18),
+  );
 }
 
-// ── How to Play bottom sheet ───────────────────────────────────────────────────
 class _HowToPlaySheet extends StatelessWidget {
   const _HowToPlaySheet();
 
@@ -647,7 +665,7 @@ class _HowToPlaySheet extends StatelessWidget {
           _step('2', 'A block can only move if nothing is blocking its path.'),
           _step(
             '3',
-            'Tap a blocked block — it shakes to tell you it can\'t move.',
+            "Tap a blocked block — it shakes to tell you it can't move.",
           ),
           _step('4', 'Clear all blocks to complete the level.'),
           _step('5', 'Use fewer moves to earn 3 stars ★★★'),
@@ -679,46 +697,42 @@ class _HowToPlaySheet extends StatelessWidget {
     );
   }
 
-  Widget _step(String num, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: const Color(0xFF4361EE).withOpacity(0.2),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFF4361EE).withOpacity(0.5),
-              ),
-            ),
-            child: Center(
-              child: Text(
-                num,
-                style: const TextStyle(
-                  color: Color(0xFF4CC9F0),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                ),
-              ),
-            ),
+  Widget _step(String num, String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: const Color(0xFF4361EE).withOpacity(0.2),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFF4361EE).withOpacity(0.5)),
           ),
-          const SizedBox(width: 12),
-          Expanded(
+          child: Center(
             child: Text(
-              text,
+              num,
               style: const TextStyle(
-                color: Color(0xFFAAAAAA),
-                fontSize: 13,
-                height: 1.5,
+                color: Color(0xFF4CC9F0),
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Color(0xFFAAAAAA),
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

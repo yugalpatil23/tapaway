@@ -138,42 +138,112 @@ class LevelGenerator {
 
   // ── Core generation ──────────────────────────────────────────────────────────
   static List<ArrowBlock> _buildLevel(int level, int gridSize, Random rng) {
-    // Density: ramps from 30% → 80% over 1000 levels
     final density = 0.30 + (level - 1) * (0.50 / 999.0);
     final totalCells = gridSize * gridSize;
     final blockCount = (totalCells * density).round().clamp(3, totalCells);
+    final colors = _blockColors(level, rng);
+    final darks = _blockDark(level);
 
-    // Shuffle positions
+    // Try up to 15 seeds to find a deadlock-free layout
+    for (int attempt = 0; attempt < 15; attempt++) {
+      final seed = rng.nextInt(999999) ^ (attempt * 7919);
+      final tryRng = Random(seed);
+
+      final positions = [
+        for (int r = 0; r < gridSize; r++)
+          for (int c = 0; c < gridSize; c++) [r, c],
+      ]..shuffle(tryRng);
+
+      final List<ArrowBlock> blocks = [];
+      for (int i = 0; i < blockCount; i++) {
+        final r = positions[i][0];
+        final c = positions[i][1];
+        blocks.add(
+          ArrowBlock(
+            id: 'b$i',
+            row: r,
+            col: c,
+            direction: _pickDirection(r, c, gridSize, level, tryRng),
+            color: colors[i % colors.length],
+            darkColor: darks[i % darks.length],
+          ),
+        );
+      }
+
+      if (_isSolvable(blocks, gridSize)) return blocks;
+    }
+
+    // Guaranteed fallback: all blocks point toward nearest edge
     final positions = [
       for (int r = 0; r < gridSize; r++)
         for (int c = 0; c < gridSize; c++) [r, c],
     ]..shuffle(rng);
 
-    final colors = _blockColors(level, rng);
-    final darks = _blockDark(level);
-
-    final List<ArrowBlock> blocks = [];
-    int id = 0;
-
-    for (int i = 0; i < blockCount; i++) {
+    return List.generate(blockCount, (i) {
       final r = positions[i][0];
       final c = positions[i][1];
-      final dir = _pickDirection(r, c, gridSize, level, rng);
-      final ci = id % colors.length;
-
-      blocks.add(
-        ArrowBlock(
-          id: 'b$id',
-          row: r,
-          col: c,
-          direction: dir,
-          color: colors[ci],
-          darkColor: darks[ci],
-        ),
+      return ArrowBlock(
+        id: 'b$i',
+        row: r,
+        col: c,
+        direction: _nearestEdge(r, c, gridSize),
+        color: colors[i % colors.length],
+        darkColor: darks[i % darks.length],
       );
-      id++;
+    });
+  }
+
+  /// Direction toward the nearest grid edge — always escapable.
+  static ArrowDirection _nearestEdge(int row, int col, int gs) {
+    final d = [row, gs - 1 - row, col, gs - 1 - col];
+    final best = d.reduce(min);
+    if (d[0] == best) return ArrowDirection.up;
+    if (d[2] == best) return ArrowDirection.left;
+    if (d[1] == best) return ArrowDirection.down;
+    return ArrowDirection.right;
+  }
+
+  /// Greedy simulation: repeatedly remove any block that can currently slide.
+  /// True = all blocks can be removed → no deadlock.
+  static bool _isSolvable(List<ArrowBlock> blocks, int gs) {
+    final rows = List<int>.from(blocks.map((b) => b.row));
+    final cols = List<int>.from(blocks.map((b) => b.col));
+    final removed = List<bool>.filled(blocks.length, false);
+
+    bool progress = true;
+    while (progress) {
+      progress = false;
+      for (int i = 0; i < blocks.length; i++) {
+        if (removed[i]) continue;
+        if (_slideCheck(i, blocks, rows, cols, removed, gs)) {
+          removed[i] = true;
+          progress = true;
+        }
+      }
     }
-    return blocks;
+    return removed.every((r) => r);
+  }
+
+  static bool _slideCheck(
+    int idx,
+    List<ArrowBlock> blocks,
+    List<int> rows,
+    List<int> cols,
+    List<bool> removed,
+    int gs,
+  ) {
+    final delta = blocks[idx].direction.delta;
+    int r = rows[idx] + delta.dy.toInt();
+    int c = cols[idx] + delta.dx.toInt();
+    while (r >= 0 && r < gs && c >= 0 && c < gs) {
+      for (int j = 0; j < blocks.length; j++) {
+        if (!removed[j] && j != idx && rows[j] == r && cols[j] == c)
+          return false;
+      }
+      r += delta.dy.toInt();
+      c += delta.dx.toInt();
+    }
+    return true;
   }
 
   static ArrowDirection _pickDirection(
