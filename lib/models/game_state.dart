@@ -112,7 +112,7 @@ class GameState extends ChangeNotifier {
 
     onSound?.call('slide');
 
-    await Future.delayed(const Duration(milliseconds: 320));
+    await Future.delayed(const Duration(milliseconds: 620));
 
     _blocks[idx] = _blocks[idx].copyWith(isSliding: false, isRemoved: true);
     _isAnimating = false;

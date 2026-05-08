@@ -59,9 +59,9 @@ class LevelGenerator {
 
     final gridSize = _gridSize(level);
     final difficulty = _difficulty(level);
-    final palette = _palette(level);
-    final themeColor = palette[0];
-    final themeDark = palette[1];
+    final themePair = _themePair(level);
+    final themeColor = themePair[0];
+    final themeDark = themePair[1];
 
     final blocks = _buildLevel(level, gridSize, rng);
 
@@ -70,39 +70,43 @@ class LevelGenerator {
       gridSize: gridSize,
       blocks: blocks,
       difficulty: difficulty,
-      themeColor: Colors.red,
-      themeDark: Colors.green,
+      themeColor: themeColor,
+      themeDark: themeDark,
     );
   }
 
   static int _gridSize(int level) {
-    if (level <= 10) return 4;
-    if (level <= 25) return 5;
-    if (level <= 50) return 6;
-    if (level <= 100) return 7;
-    if (level <= 200) return 8;
-    if (level <= 400) return 9;
-    return 10;
+    if (level <= 3) return 4; // Levels   1–3   → 4×4  (3 levels,  Cyan)
+    if (level <= 10) return 5; // Levels   4–10  → 5×5  (7 levels,  Green)
+    if (level <= 22) return 6; // Levels  11–22  → 6×6  (12 levels, Yellow)
+    if (level <= 50) return 7; // Levels  23–50  → 7×7
+    if (level <= 150) return 8; // Levels  51–150 → 8×8
+    if (level <= 400) return 9; // Levels 151–400 → 9×9
+    return 10; // Levels 401–1000 → 10×10
   }
 
   static String _difficulty(int level) {
-    if (level <= 50) return 'Easy';
+    if (level <= 22) return 'Easy';
     if (level <= 200) return 'Medium';
     if (level <= 500) return 'Hard';
     return 'Expert';
   }
 
-  static List<List<Color>> _palette(int level) {
-    List<List<Color>> p;
-    if (level <= 50)
-      p = _easyPalette;
-    else if (level <= 200)
-      p = _medPalette;
-    else if (level <= 500)
-      p = _hardPalette;
-    else
-      p = _expertPalette;
-    return p;
+  /// Returns [themeColor, themeDark] for the given level.
+  static List<Color> _themePair(int level) {
+    if (level <= 3)
+      return _easyPalette[0]; // Cyan  & Sky Blue  (4×4, levels 1–3)
+    if (level <= 10)
+      return _easyPalette[1]; // Green & Teal      (5×5, levels 4–10)
+    if (level <= 22)
+      return _easyPalette[2]; // Yellow & Orange   (6×6, levels 11–22)
+    final pool = level <= 200
+        ? _medPalette
+        : level <= 500
+        ? _hardPalette
+        : _expertPalette;
+    // Rotate through the pool so each group of levels gets a different hue
+    return pool[((level - 23) ~/ 20) % pool.length];
   }
 
   static List<Color> _blockColors(int level, Random rng) {

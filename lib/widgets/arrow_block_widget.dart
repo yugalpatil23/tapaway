@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/arrow_block.dart';
-import 'dart:math';
 
 class ArrowBlockWidget extends StatefulWidget {
   final ArrowBlock block;
   final double cellSize;
-  final bool canSlide;
   final bool isHinted;
   final VoidCallback onTap;
 
@@ -13,7 +11,6 @@ class ArrowBlockWidget extends StatefulWidget {
     super.key,
     required this.block,
     required this.cellSize,
-    required this.canSlide,
     required this.onTap,
     this.isHinted = false,
   });
@@ -27,10 +24,19 @@ class _ArrowBlockWidgetState extends State<ArrowBlockWidget>
   late AnimationController _slideCtrl;
   late AnimationController _shakeCtrl;
   late AnimationController _hintCtrl;
-  late Animation<Offset> _slideAnim;
+
+  // Slide: pixel offset in the arrow's direction
+  late Animation<double> _slideAnim;
+
+  // Fade: only kicks in at the very end (80–100%) so block is visible throughout
   late Animation<double> _fadeAnim;
+
+  // Shake: left-right translation for blocked blocks
   late Animation<double> _shakeAnim;
-  late Animation<double> _hintAnim;
+
+  // Hint: subtle scale pulse
+  late Animation<double> _hintPulse;
+
   bool _wasSliding = false;
   bool _wasShaking = false;
 
@@ -38,53 +44,74 @@ class _ArrowBlockWidgetState extends State<ArrowBlockWidget>
   void initState() {
     super.initState();
 
+    // ── Slide: 600ms, accelerates like a real object being launched ──────────
     _slideCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 600),
     );
+
+    // Travel distance in pixels: enough to fully exit the board.
+    // cellSize * gridSize would be the max, but we don't know gridSize here,
+    // so we use a large fixed pixel value — the ClipRRect on the board hides
+    // anything that goes past the edge anyway.
+    final travelPx = widget.cellSize * 12.0;
+
+    _slideAnim = Tween<double>(begin: 0.0, end: travelPx).animate(
+      CurvedAnimation(
+        parent: _slideCtrl,
+        // easeInQuart: starts slow (satisfying "thinking" moment), then
+        // rockets off — feels like the block is being launched
+        curve: Curves.easeInQuart,
+      ),
+    );
+
+    // Fade: invisible until 75% of the journey, then quickly fades out.
+    // This means the player sees the block travel most of the way
+    // before it disappears — the removal feels physical.
+    _fadeAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _slideCtrl,
+        curve: const Interval(0.75, 1.0, curve: Curves.easeOut),
+      ),
+    );
+
+    // ── Shake: 480ms left-right wobble ────────────────────────────────────────
     _shakeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _hintCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    )..repeat(reverse: true);
-
-    _slideAnim = Tween<Offset>(
-      begin: Offset.zero,
-      end: _slideEnd,
-    ).animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeIn));
-
-    _fadeAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _slideCtrl, curve: const Interval(0.4, 1.0)),
+      duration: const Duration(milliseconds: 480),
     );
 
     _shakeAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: -6.0), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -6.0, end: 6.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 6.0, end: -6.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -6.0, end: 6.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 6.0, end: 0.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -8.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -8.0, end: 8.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 8.0, end: -8.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -8.0, end: 8.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 8.0, end: 0.0), weight: 1),
     ]).animate(CurvedAnimation(parent: _shakeCtrl, curve: Curves.easeInOut));
 
-    _hintAnim = Tween(
-      begin: 0.6,
+    // ── Hint: gentle scale pulse ───────────────────────────────────────────────
+    _hintCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+
+    _hintPulse = Tween(
+      begin: 0.93,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _hintCtrl, curve: Curves.easeInOut));
   }
 
-  Offset get _slideEnd {
-    const d = 9.0;
+  /// Returns the directional unit vector as an Offset
+  Offset get _directionUnit {
     switch (widget.block.direction) {
       case ArrowDirection.up:
-        return Offset(0, -d);
+        return const Offset(0, -1);
       case ArrowDirection.down:
-        return Offset(0, d);
+        return const Offset(0, 1);
       case ArrowDirection.left:
-        return Offset(-d, 0);
+        return const Offset(-1, 0);
       case ArrowDirection.right:
-        return Offset(d, 0);
+        return const Offset(1, 0);
     }
   }
 
@@ -120,24 +147,30 @@ class _ArrowBlockWidgetState extends State<ArrowBlockWidget>
     if (widget.block.isRemoved && !widget.block.isSliding) {
       return const SizedBox.shrink();
     }
+
     final cs = widget.cellSize;
-    final pad = cs * 0.06; // gap between cells
+    final pad = cs * 0.055;
+    final unit = _directionUnit;
 
     return AnimatedBuilder(
-      animation: Listenable.merge([_shakeAnim, _hintAnim]),
-      builder: (_, child) {
-        return SlideTransition(
-          position: _slideAnim,
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: Transform.translate(
-              offset: Offset(_shakeAnim.value, 0),
-              child: GestureDetector(
-                onTap: widget.canSlide ? widget.onTap : _onBlockedTap,
-                child: Padding(
-                  padding: EdgeInsets.all(pad),
-                  child: _buildBlock(cs - pad * 2),
-                ),
+      animation: Listenable.merge([_slideCtrl, _shakeCtrl, _hintCtrl]),
+      builder: (_, __) {
+        // Pixel translation: slide distance × direction unit
+        final slide = _slideAnim.value;
+        final slideOffset = Offset(
+          unit.dx * slide + _shakeAnim.value,
+          unit.dy * slide,
+        );
+
+        return Opacity(
+          opacity: _fadeAnim.value,
+          child: Transform.translate(
+            offset: slideOffset,
+            child: GestureDetector(
+              onTap: widget.onTap,
+              child: Padding(
+                padding: EdgeInsets.all(pad),
+                child: _buildBlock(cs - pad * 2),
               ),
             ),
           ),
@@ -146,63 +179,38 @@ class _ArrowBlockWidgetState extends State<ArrowBlockWidget>
     );
   }
 
-  void _onBlockedTap() {
-    widget.onTap(); // GameState handles shake + sound
-  }
-
   Widget _buildBlock(double size) {
     final isHinted = widget.isHinted;
-    final canSlide = widget.canSlide;
 
-    return AnimatedBuilder(
-      animation: _hintAnim,
-      builder: (_, __) {
-        final hintScale = isHinted ? _hintAnim.value : 1.0;
-        return Transform.scale(
-          scale: hintScale,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  canSlide
-                      ? widget.block.color
-                      : widget.block.color.withOpacity(0.35),
-                  canSlide
-                      ? widget.block.darkColor
-                      : widget.block.darkColor.withOpacity(0.35),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(size * 0.22),
-              border: isHinted
-                  ? Border.all(color: const Color(0xFFFFD60A), width: 2.5)
-                  : canSlide
-                  ? Border.all(
-                      color: Colors.white.withOpacity(0.35),
-                      width: 1.5,
-                    )
-                  : Border.all(color: Colors.white.withOpacity(0.08), width: 1),
-              boxShadow: canSlide
-                  ? [
-                      BoxShadow(
-                        color: widget.block.color.withOpacity(0.55),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                      if (isHinted)
-                        BoxShadow(
-                          color: const Color(0xFFFFD60A).withOpacity(0.6),
-                          blurRadius: 16,
-                          spreadRadius: 2,
-                        ),
-                    ]
-                  : [],
-            ),
-            child: Center(child: _buildArrow(size)),
+    return Transform.scale(
+      scale: isHinted ? _hintPulse.value : 1.0,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [widget.block.color, widget.block.darkColor],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        );
-      },
+          borderRadius: BorderRadius.circular(size * 0.22),
+          border: isHinted
+              ? Border.all(color: const Color(0xFFFFD60A), width: 2.5)
+              : Border.all(color: Colors.white.withOpacity(0.18), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: widget.block.color.withOpacity(0.30),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+            if (isHinted)
+              BoxShadow(
+                color: const Color(0xFFFFD60A).withOpacity(0.65),
+                blurRadius: 18,
+                spreadRadius: 3,
+              ),
+          ],
+        ),
+        child: Center(child: _buildArrow(size)),
+      ),
     );
   }
 
@@ -210,63 +218,46 @@ class _ArrowBlockWidgetState extends State<ArrowBlockWidget>
     return Transform.rotate(
       angle: widget.block.direction.rotationAngle,
       child: CustomPaint(
-        size: Size(size * 0.48, size * 0.48),
-        painter: _ArrowPainter(
-          color: widget.canSlide ? Colors.white : Colors.white.withOpacity(0.3),
-          glowing: widget.canSlide,
-        ),
+        size: Size(size * 0.46, size * 0.46),
+        painter: const _ArrowPainter(),
       ),
     );
   }
 }
 
 class _ArrowPainter extends CustomPainter {
-  final Color color;
-  final bool glowing;
-  const _ArrowPainter({required this.color, required this.glowing});
+  const _ArrowPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    final sw = w * 0.15;
 
     final paint = Paint()
-      ..color = color
-      ..strokeWidth = sw
+      ..color = Colors.white.withOpacity(0.92)
+      ..strokeWidth = w * 0.15
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
 
-    if (glowing) {
-      final glow = Paint()
-        ..color = color.withOpacity(0.25)
-        ..strokeWidth = sw * 2
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..style = PaintingStyle.stroke
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-      _draw(canvas, glow, w, h);
-    }
-    _draw(canvas, paint, w, h);
-  }
-
-  void _draw(Canvas c, Paint p, double w, double h) {
     // Stem
-    final stem = Path()
-      ..moveTo(w / 2, h * 0.88)
-      ..lineTo(w / 2, h * 0.32);
-    c.drawPath(stem, p);
+    canvas.drawPath(
+      Path()
+        ..moveTo(w / 2, h * 0.88)
+        ..lineTo(w / 2, h * 0.32),
+      paint,
+    );
 
-    // Head
-    final head = Path()
-      ..moveTo(w * 0.15, h * 0.52)
-      ..lineTo(w / 2, h * 0.08)
-      ..lineTo(w * 0.85, h * 0.52);
-    c.drawPath(head, p);
+    // Arrowhead
+    canvas.drawPath(
+      Path()
+        ..moveTo(w * 0.15, h * 0.52)
+        ..lineTo(w / 2, h * 0.08)
+        ..lineTo(w * 0.85, h * 0.52),
+      paint,
+    );
   }
 
   @override
-  bool shouldRepaint(_ArrowPainter old) =>
-      old.color != color || old.glowing != glowing;
+  bool shouldRepaint(_ArrowPainter _) => false;
 }

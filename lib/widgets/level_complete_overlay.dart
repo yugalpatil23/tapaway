@@ -253,7 +253,9 @@ class _LevelCompleteOverlayState extends State<LevelCompleteOverlay>
               // Restart
               _CircleBtn(
                 icon: Icons.refresh_rounded,
-                onTap: () => game.restartLevel(),
+                onTap: () => WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => game.restartLevel(),
+                ),
                 color: const Color(0xFF2A2A45),
               ),
               const SizedBox(width: 12),
@@ -261,7 +263,9 @@ class _LevelCompleteOverlayState extends State<LevelCompleteOverlay>
               Expanded(
                 child: GestureDetector(
                   onTap: game.levelNumber < kTotalLevels
-                      ? () => game.nextLevel()
+                      ? () => WidgetsBinding.instance.addPostFrameCallback(
+                          (_) => game.nextLevel(),
+                        )
                       : null,
                   child: Container(
                     height: 52,

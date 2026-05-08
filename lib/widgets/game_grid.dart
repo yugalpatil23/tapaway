@@ -53,7 +53,6 @@ class GameGrid extends StatelessWidget {
                       child: ArrowBlockWidget(
                         block: block,
                         cellSize: cellSize,
-                        canSlide: game.canSlide(block),
                         isHinted: block.id == hintedBlockId,
                         onTap: () => game.tapBlock(block),
                       ),

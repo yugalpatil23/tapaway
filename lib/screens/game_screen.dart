@@ -244,7 +244,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildMidStats(GameState game, Color tc) {
-    final canMove = game.blocks.where((b) => game.canSlide(b)).length;
     return Row(
       children: [
         _StatPill(
@@ -261,32 +260,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           color: const Color(0xFF6B7280),
         ),
         const SizedBox(width: 8),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              color: canMove > 0
-                  ? const Color(0xFF0A2A15)
-                  : const Color(0xFF2A1010),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: canMove > 0
-                    ? const Color(0xFF06D6A0).withOpacity(0.4)
-                    : const Color(0xFFFF4D6D).withOpacity(0.4),
-              ),
-            ),
-            child: Text(
-              canMove > 0 ? '$canMove movable' : 'Stuck? Use hint!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: canMove > 0
-                    ? const Color(0xFF06D6A0)
-                    : const Color(0xFFFF4D6D),
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+        _StatPill(
+          label: 'LEFT',
+          value: '${game.blocks.length}',
+          icon: Icons.grid_view_rounded,
+          color: const Color(0xFFA29BFE),
         ),
       ],
     );

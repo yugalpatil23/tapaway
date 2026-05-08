@@ -228,6 +228,12 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildLevelGrid(BuildContext context, GameState game) {
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      // addRepaintBoundaries: false avoids per-cell layer creation for
+      // simple cells — reduces compositor overhead significantly
+      addRepaintBoundaries: false,
+      // cacheExtent: pre-render cells 600px above/below the viewport
+      // so scrolling never hits a blank frame
+      cacheExtent: 600,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 5,
         crossAxisSpacing: 8,
@@ -241,6 +247,8 @@ class _HomeScreenState extends State<HomeScreen>
         final unlocked = level <= game.highestUnlocked;
         final isCurrent = level == game.highestUnlocked;
         return _LevelCell(
+          // Key by level number so Flutter reuses cells correctly
+          key: ValueKey(level),
           level: level,
           stars: stars,
           unlocked: unlocked,
@@ -253,15 +261,20 @@ class _HomeScreenState extends State<HomeScreen>
 
   void _openLevel(BuildContext context, int level) {
     AudioManager().play('slide');
+    final game = context.read<GameState>();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ChangeNotifierProvider.value(
-          value: context.read<GameState>()..loadLevel(level),
+          value: game,
           child: const GameScreen(),
         ),
       ),
-    );
+      // Load the level AFTER the new route is fully mounted — never during build
+    ).then((_) => null);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      game.loadLevel(level);
+    });
   }
 }
 
@@ -353,6 +366,7 @@ class _LevelCell extends StatelessWidget {
   final VoidCallback? onTap;
 
   const _LevelCell({
+    super.key,
     required this.level,
     required this.stars,
     required this.unlocked,
@@ -360,34 +374,43 @@ class _LevelCell extends StatelessWidget {
     this.onTap,
   });
 
+  // Pre-computed accent colours — no branching in build()
+  static const _accents = [
+    Color(0xFF4CC9F0), // Easy   lv 1–50
+    Color(0xFF80FFDB), // Medium lv 51–200
+    Color(0xFFFFD166), // Hard   lv 201–500
+    Color(0xFFFF6B9D), // Expert lv 501–1000
+  ];
+
   Color get _accent {
-    if (level <= 50) return const Color(0xFF4CC9F0);
-    if (level <= 200) return const Color(0xFF80FFDB);
-    if (level <= 500) return const Color(0xFFFFD166);
-    return const Color(0xFFFF6B9D);
+    if (level <= 50) return _accents[0];
+    if (level <= 200) return _accents[1];
+    if (level <= 500) return _accents[2];
+    return _accents[3];
   }
 
   @override
   Widget build(BuildContext context) {
+    final accent = _accent;
+    // Pre-resolve all colours once — avoids repeated withOpacity() in build
+    final bgColor = isCurrent
+        ? Color.fromRGBO(accent.red, accent.green, accent.blue, 0.20)
+        : unlocked
+        ? const Color(0x0FFFFFFF)
+        : const Color(0x05FFFFFF);
+    final borderColor = isCurrent
+        ? accent
+        : unlocked
+        ? Color.fromRGBO(accent.red, accent.green, accent.blue, 0.25)
+        : const Color(0x0DFFFFFF);
+
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: Container(
         decoration: BoxDecoration(
-          color: isCurrent
-              ? _accent.withOpacity(0.2)
-              : unlocked
-              ? Colors.white.withOpacity(0.06)
-              : Colors.white.withOpacity(0.02),
+          color: bgColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isCurrent
-                ? _accent
-                : unlocked
-                ? _accent.withOpacity(0.25)
-                : Colors.white.withOpacity(0.05),
-            width: isCurrent ? 2 : 1,
-          ),
+          border: Border.all(color: borderColor, width: isCurrent ? 2 : 1),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -397,30 +420,47 @@ class _LevelCell extends StatelessWidget {
             else
               Text(
                 '$level',
-                style: TextStyle(
-                  color: unlocked ? Colors.white : const Color(0xFF4A4A6A),
+                style: const TextStyle(
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
               ),
             if (stars > 0) ...[
               const SizedBox(height: 3),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  3,
-                  (i) => Icon(
-                    i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
-                    size: 9,
-                    color: i < stars
-                        ? const Color(0xFFFFD60A)
-                        : const Color(0xFF3A3A5A),
-                  ),
+              // Fixed-width Row avoids layout recalculation — 3 icons always same size
+              SizedBox(
+                width: 33,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _StarDot(filled: stars >= 1),
+                    _StarDot(filled: stars >= 2),
+                    _StarDot(filled: stars >= 3),
+                  ],
                 ),
               ),
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Tiny coloured dot — cheaper than Icon widget for 3000 star slots
+class _StarDot extends StatelessWidget {
+  final bool filled;
+  const _StarDot({required this.filled});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: filled ? const Color(0xFFFFD60A) : const Color(0xFF2A2A45),
+        shape: BoxShape.circle,
       ),
     );
   }
